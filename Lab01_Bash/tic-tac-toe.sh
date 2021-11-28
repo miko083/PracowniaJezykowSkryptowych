@@ -12,8 +12,7 @@ CURRENT_PLAYER="1"
 # 1 - 2 players
 function is_single_player {
     while ! [[ $NUMBER_OF_PLAYERS =~ ^[0-9]+$ && $NUMBER_OF_PLAYERS -lt 3 && $NUMBER_OF_PLAYERS -gt 0 ]]; do
-        echo -n "Please enter how many players gonna play (1 or 2): "
-        read NUMBER_OF_PLAYERS
+        read -p "Please enter how many players gonna play (1 or 2): " NUMBER_OF_PLAYERS
     done
     if [[ $NUMBER_OF_PLAYERS -eq 1 ]]; then
         COMPUTER_PLAYING="true"
@@ -40,7 +39,7 @@ function load_game {
             COMPUTER_PLAYING=$(cat file.txt | grep ComputerPlaying | cut -d ":" -f2 | tr -d ' ')
             IS_PLAYER_1_MOVE=$(cat file.txt | grep IsPlayerOneMove | cut -d ":" -f2 | tr -d ' ')
             TURNS=$(cat file.txt | grep Turns | cut -d ":" -f2 | tr -d ' ')
-            change_player
+            set_player_variables "false"
         else
             is_single_player
         fi
@@ -86,8 +85,8 @@ function check_win {
     true
 }
 
-function change_player {
-    if [[ $IS_PLAYER_1_MOVE == "true" ]]; then
+function set_player_variables {
+    if [[ $IS_PLAYER_1_MOVE == $1 ]]; then
         set_player "false" "O" "2"
     else
         set_player "true" "X" "1"
@@ -102,16 +101,13 @@ function set_player {
 
 # Check if selected field is in proper range + if it is not already selected
 function check_field {
-    if [[ $COMPUTER_PLAYING == "false" ]]; then
-        enter_field
-    fi
     if ! [[ $SELECTED_FIELD =~ ^[0-9]+$ && $SELECTED_FIELD -lt 10 && $SELECTED_FIELD -gt 0 ]]; then
         echo "Please enter integer in range 1 - 9!"
         false
         return
     fi
     if [[ ${BOARD[$(($SELECTED_FIELD-1))]} == "X" || ${BOARD[$(($SELECTED_FIELD-1))]} == "O" ]]; then
-        if [[ $COMPUTER_PLAYING == "false" ]]; then
+        if ! [[ $COMPUTER_PLAYING == "true" && "$IS_PLAYER_1_MOVE" == "false" ]]; then
             echo "This field has already been selected!"
         fi
         false
@@ -122,23 +118,23 @@ function check_field {
 
 function enter_field {
     echo "Player $CURRENT_PLAYER move!"
-    echo -n "Please enter field: "
-    read SELECTED_FIELD
+    read -p "Please enter field: " SELECTED_FIELD
 }
 
 function mark {
-    # if [[ $NUMBER_OF_PLAYERS -eq 1 && $IS_PLAYER_1_MOVE == "false" ]]; then
-    #    SELECTED_FIELD=$(($RANDOM%9+1))
-    # fi
-    # enter_field
+    get_field
     while ! check_field $SELECTED_FIELD; do
-        if [[ "$IS_PLAYER_1_MOVE" == "false" && $COMPUTER_PLAYING == "true" ]]; then
-            SELECTED_FIELD=$(($RANDOM%9+1))
-        else
-            enter_field
-        fi
+        get_field
     done
     BOARD[$(($SELECTED_FIELD-1))]="$MARK"  
+}
+
+function get_field {
+    if [[ "$IS_PLAYER_1_MOVE" == "false" && $COMPUTER_PLAYING == "true" ]]; then
+        SELECTED_FIELD=$(($RANDOM%9+1))
+    else
+        enter_field
+    fi
 }
 
 function save_to_file {
@@ -151,8 +147,8 @@ function save_to_file {
     echo "Turns: $TURNS" >> file.txt
 }
 
-
 load_game
+echo "Autosave enabled!"
 
 # while loop for 9 turns (max in game)
 while [ $TURNS -lt 9 ]; do
@@ -166,7 +162,7 @@ while [ $TURNS -lt 9 ]; do
         rm file.txt
         exit
     fi
-    change_player
+    set_player_variables "true"
     TURNS=$((TURNS+1))
     save_to_file
 done
