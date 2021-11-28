@@ -148,7 +148,7 @@ function save_to_file {
 }
 
 load_game
-echo "Autosave enabled!"
+echo "Autosave enabled after every move! Press CTRL-C to stop a game, then re-launch a script and you will have an option to resume the previous game."
 
 # while loop for 9 turns (max in game)
 while [ $TURNS -lt 9 ]; do
